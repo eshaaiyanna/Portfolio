@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Chatbot</title>
+    <style>
+        #chat-box {
+            height: 400px;
+            overflow-y: scroll;
+        }
+    </style>
+</head>
+<body>
+
+    <input type="text" id="session-id-input" placeholder="Enter Session ID">
+    <button onclick="fetchPreviousChats()">Fetch Previous Chats</button>
+    <button onclick="startNewSession()">Start New Session</button>
+    <div id="chat-box" style="display:none;">
+        <!-- Chat messages will appear here -->
+    </div>
+
+    <input type="text" id="user-input" placeholder="Type your message..." style="display:none;">
+    <button onclick="sendMessage()" style="display:none;">Send</button>
+
+    <script>
+        // let sessionId;
+
+        async function fetchPreviousChats() {
+            sessionId = document.getElementById('session-id-input').value; -->
+            if (!sessionId) {
+                let sessionId = localStorage.getItem("sessionID");
+                console.log(sessionId)
+                return;
+            }
+
+            //let sessionId = localStorage.getItem("sessionID");
+            //console.log(sessionId)
+
+            const response = await fetch('http://127.0.0.1:5000/fetch_previous_chats', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    session_id: sessionId
+                })
+            });
+
+            const data = await response.json();
+            console.log(data)
+            userID = data.user_id;
+            sessionID = data.session_id;
+            localStorage.setItem("userID", userID);
+            localStorage.setItem("sessionID", sessionID);
+
+            //let chatBox = document.getElementById('chat-box');
+            //chatBox.innerHTML += data.previous_chats;
+            
+            //data.previous_chats.forEach(chat => {
+             //   appendMessage(chat.who, chat.message, chat.timestamp);
+            //});
+            let chatBox = document.getElementById('chat-box');
+            chatBox.style.display = 'block';
+            chatBox.innerHTML = data.previous_chats;
+            document.getElementById("user-input").style.display = "inline";
+            document.getElementsByTagName("button")[2].style.display = "inline";
+        }
+
+        function startNewSession() {
+            sessionID = generateUUID();
+            userID = generateUUID();
+            localStorage.setItem("sessionID", sessionID);
+            localStorage.setItem("userID", userID);
+
+            let chatBox = document.getElementById('chat-box');
+            chatBox.style.display = 'block';
+            document.getElementById("user-input").style.display = "inline";
+            document.getElementsByTagName("button")[2].style.display = "inline";
+        }
+
+        function generateUUID() {
+            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                var r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
+                return v.toString(16);
+            });
+        }
+
+        function appendMessage(who, message, timestamp) {
+            document.getElementById('chat-box').innerHTML += `<b>${who} (${timestamp}):</b> ${message}<br>`;
+        }
+
+        async function sendMessage() {
+            let userInput = document.getElementById('user-input').value;
+            let timestamp = new Date().toISOString();
+            appendMessage('You', userInput, timestamp);
+
+            const response = await fetch('http://127.0.0.1:5000/chat', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ 'user_input': userInput, 'user_id': userID, 'session_id': sessionID })
+            });
+
+            const data = await response.json();
+            appendMessage('Bot', data.bot_response, new Date().toISOString());
+            document.getElementById('user-input').value = '';
+        }
+        
+        // Add an event listener for the Enter key
+        document.getElementById('user-input').addEventListener('keydown', function(e) {
+            if (e.keyCode === 13) {  // Enter key
+                e.preventDefault();  // Prevent the default action (new line or submit)
+                sendMessage();  // Trigger the sendChat function
+            }
+        });
+
+        
+    </script>
+</body>
+</html>
